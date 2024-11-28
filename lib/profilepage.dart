@@ -1,32 +1,16 @@
+// user_profile_page.dart
 import 'package:flutter/material.dart';
-import 'My Pledged Gifts Page.dart';
-import 'main.dart';
+import 'package:mbileprogrammingproject/main.dart';
+import 'package:provider/provider.dart';
+import 'package:mbileprogrammingproject/controlles/profilecontroller.dart';
+import 'package:mbileprogrammingproject/models/profilemodel.dart';
 
+import 'controlles/maincontroller.dart';
 
-
-class UserProfilePage extends StatefulWidget {
-  final UserProfile userProfile;
-
-  UserProfilePage({required this.userProfile});
-
+class UserProfilePage extends StatefulWidget
+{
   @override
   _UserProfilePageState createState() => _UserProfilePageState();
-}
-
-class UserProfile {
-  String? name;
-  String? email;
-  String? password;
-  bool notificationsEnabled = false; // Add this property
-
-  String? get getEmail => email;
-  set setEmail(String value) => email = value;
-
-  String? get getName => name;
-  set setName(String value) => name = value;
-
-  bool get getNotifications => notificationsEnabled;
-  set setNotifications(bool value) => notificationsEnabled = value;
 }
 
 class _UserProfilePageState extends State<UserProfilePage> {
@@ -36,8 +20,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.userProfile.name);
-    _emailController = TextEditingController(text: widget.userProfile.email);
+    final userProfileController = Provider.of<UserProfileController>(context, listen: false);
+    _nameController = TextEditingController(text: userProfileController.userProfile.name);
+    _emailController = TextEditingController(text: userProfileController.userProfile.email);
+
+    // Load profile from storage when the page is initialized
+    userProfileController.loadProfileFromStorage();
   }
 
   @override
@@ -47,61 +35,69 @@ class _UserProfilePageState extends State<UserProfilePage> {
     super.dispose();
   }
 
-  void _saveProfile() {
-    setState(() {
-      widget.userProfile.name = _nameController.text;
-      widget.userProfile.email = _emailController.text;
-    });
-    Navigator.pop(context);
+  void _saveProfile() async {
+    final userProfileController = Provider.of<UserProfileController>(context, listen: false);
+    userProfileController.updateProfile(
+      newName: _nameController.text,
+      newEmail: _emailController.text,
+    );
+    await userProfileController.saveProfileToStorage();
+    Navigator.pop(context); // Navigate back after saving
   }
 
   @override
   Widget build(BuildContext context) {
+    final userProfileController = Provider.of<UserProfileController>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('User Profile'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Notifications'),
-                Switch(
-                  value: widget.userProfile.notificationsEnabled,
-                  onChanged: (value) {
-                    setState(() {
-                      widget.userProfile.notificationsEnabled = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _saveProfile,
-              child: Text('Save'),
-            ),
-            ElevatedButton(
-              onPressed: ()
-              {
-                final homePageState = context.findAncestorStateOfType<HomePageState>();
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Notifications'),
+                  Switch(
+                    value: userProfileController.userProfile.notificationsEnabled,
+                    onChanged: (value) {
+                      userProfileController.updateProfile(
+                        newNotifications: value,
+                      );
+                    },
+                  ),
+                ],
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _saveProfile,
+                child: Text('Save'),
+              ),
 
-                  homePageState?.onItemTapped(4); // Switch to the "Pledged Gifts" tab
-              },
-              child: Text('My Pledged Gifts'),
-            ),
-          ],
+              ElevatedButton
+                (
+                onPressed: ()
+                {
+                  final mainViewController = Provider.of<MainViewController>(context, listen: false);
+                  mainViewController.updateSelectedIndex(3);
+                },
+                child: Text('My Pledged Gifts'),
+              ),
+            ],
+          ),
         ),
       ),
     );

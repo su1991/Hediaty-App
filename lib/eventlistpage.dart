@@ -1,58 +1,115 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Event List App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: EventListPage(),
-    );
-  }
-}
+import 'package:provider/provider.dart';
+import 'GiftListPage .dart';
+import 'package:mbileprogrammingproject/controlles/giftlistcontroller.dart';// Import GiftListPage
+import 'controlles/eventlistcontroller.dart'; // Import your controller
+import 'models/eventlistmodel.dart'; // Import your model
 
 class EventListPage extends StatefulWidget {
   @override
   _EventListPageState createState() => _EventListPageState();
 }
 
-class _EventListPageState extends State<EventListPage> {
-  List<Event> events = [
-    Event(name: 'Birthday Party', category: 'Personal', status: 'Upcoming'),
-    Event(name: 'Conference', category: 'Work', status: 'Current'),
-    Event(name: 'Wedding', category: 'Personal', status: 'Past'),
-  ];
+class _EventListPageState extends State<EventListPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // Ensures state is retained
 
-  String dropdownValue = 'Category';
-  var items = ['Category', 'Status', 'Name'];
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Call this to integrate with AutomaticKeepAliveClientMixin
 
-  void _addEvent() {
-    setState(() {
-      events.add(Event(name: 'New Event', category: 'General', status: 'Upcoming'));
-    });
+    return ChangeNotifierProvider(
+      create: (context) => EventController(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Event List'),
+          actions: [
+            Consumer<EventController>(
+              builder: (context, controller, _) {
+                return DropdownButton(
+                  value: controller.dropdownValue,
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  items: ['Category', 'Status', 'Name'].map((String item) {
+                    return DropdownMenuItem(
+                      value: item,
+                      child: Text(item),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      controller.sortEvents(newValue);
+                    }
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+        body: Consumer<EventController>(
+          builder: (context, controller, _) {
+            return ListView.builder(
+              itemCount: controller.events.length,
+              itemBuilder: (context, index) {
+                final event = controller.events[index];
+                return ListTile(
+                  title: GestureDetector(
+                    child: Text(
+                      event.name,
+                      style: TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => GiftListPage(event: event), // Pass the event here
+                        ),
+                      );
+                    },
+                  ),
+                  subtitle: Text('${event.category} - ${event.status}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () => _showEditDialog(context, controller, index),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () => controller.deleteEvent(index),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        floatingActionButton: Consumer<EventController>(
+          builder: (context, controller, _) {
+            return FloatingActionButton(
+              onPressed: controller.addEvent,
+              tooltip: 'Add Event',
+              child: Icon(Icons.add),
+            );
+          },
+        ),
+      ),
+    );
   }
 
-  void _deleteEvent(int index) {
-    setState(() {
-      events.removeAt(index);
-    });
-  }
+  void _showEditDialog(BuildContext context, EventController controller, int index) {
+    final event = controller.events[index];
+    final nameController = TextEditingController(text: event.name);
+    final categoryController = TextEditingController(text: event.category);
+    final statusController = TextEditingController(text: event.status);
 
-  void _editEvent(int index) {
     showDialog(
       context: context,
       builder: (context) {
-        final nameController = TextEditingController(text: events[index].name);
-        final categoryController = TextEditingController(text: events[index].category);
-        final statusController = TextEditingController(text: events[index].status);
-
         return AlertDialog(
           title: Text('Edit Event'),
           content: Column(
@@ -74,47 +131,25 @@ class _EventListPageState extends State<EventListPage> {
           ),
           actions: [
             TextButton(
-              onPressed: ()
-              { final name=nameController.text;
+              onPressed: () {
+                final name = nameController.text;
                 final category = categoryController.text;
-                final Status = statusController.text;
-              if (name.isEmpty)
-              {
-                // Show error if category is invalid
-                ScaffoldMessenger.of(context).showSnackBar
-                  (
-                  SnackBar(content: Text('Name field should not be empty')),
-                );
-              }
-              else
+                final status = statusController.text;
 
-              if (category!='Work' && category!='Personal')
-                {
-                  // Show error if category is invalid
-                  ScaffoldMessenger.of(context).showSnackBar
-                    (
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Name field should not be empty')),
+                  );
+                } else if (category != 'Work' && category != 'Personal') {
+                  ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Category must be "Work" or "Personal".')),
                   );
-                }
-else
-                if(Status!='Past' && Status!='Upcoming' && Status!='Current')
-                  {
-                    ScaffoldMessenger.of(context).showSnackBar
-                      (
-                      SnackBar(content: Text('Status must be "Past" or "Upcoming or Current".')),
-                    );
-                  }
-
-
-
-                else {
-                  setState(() {
-                    events[index] = Event(
-                      name: nameController.text,
-                      category: category,
-                      status: statusController.text,
-                    );
-                  });
+                } else if (status != 'Past' && status != 'Upcoming' && status != 'Current') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Status must be "Past", "Upcoming", or "Current".')),
+                  );
+                } else {
+                  controller.editEvent(index, name, category, status);
                   Navigator.of(context).pop();
                 }
               },
@@ -129,80 +164,4 @@ else
       },
     );
   }
-
-  void _sortEvents(String criterion) {
-    switch (criterion) {
-      case 'Category':
-        events.sort((a, b) => a.category.compareTo(b.category));
-        break;
-      case 'Status':
-        events.sort((a, b) => a.status.compareTo(b.status));
-        break;
-      case 'Name':
-        events.sort((a, b) => a.name.compareTo(b.name));
-        break;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Event List'),
-        actions: [
-          DropdownButton(
-            value: dropdownValue,
-            icon: const Icon(Icons.keyboard_arrow_down),
-            items: items.map((String item) {
-              return DropdownMenuItem(
-                value: item,
-                child: Text(item),
-              );
-            }).toList(),
-            onChanged: (String? newValue) {
-              setState(() {
-                dropdownValue = newValue!;
-                _sortEvents(dropdownValue); // Sort events based on the selected option
-              });
-            },
-          ),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: events.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(events[index].name),
-            subtitle: Text('${events[index].category} - ${events[index].status}'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: () => _editEvent(index),
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: () => _deleteEvent(index),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addEvent,
-        tooltip: 'Add Event',
-        child: Icon(Icons.add),
-      ),
-    );
-  }
-}
-
-class Event {
-  String name;
-  String category;
-  String status;
-
-  Event({required this.name, required this.category, required this.status});
 }

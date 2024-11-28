@@ -24,7 +24,7 @@
     <uses-permission android:name="com.example.mbileprogrammingproject.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
-        android:label="Mobile Programming Project"
+        android:label=""
         android:icon="@mipmap/ic_launcher">
 
         <activity
