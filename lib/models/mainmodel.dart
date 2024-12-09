@@ -1,4 +1,7 @@
+import 'package:mbileprogrammingproject/database/databasehelp.dart';
 
+import 'eventlistmodel.dart';
+import 'giftdetailsmodel.dart';
 class Friend
 {
   final String name;
@@ -12,7 +15,8 @@ class Friend
   });
 
 
-  factory Friend.fromMap(Map<String, dynamic> map) {
+  factory Friend.fromMap(Map<String, dynamic> map)
+  {
     return Friend(
       name: map['name'],
       profilePic: map['profilePic'],
@@ -30,7 +34,8 @@ class Friend
 }
 
 
-class MainViewState {
+class MainViewState
+{
   final bool isLoggedIn;
   final int selectedIndex;
 
@@ -44,5 +49,26 @@ class MainViewState {
       isLoggedIn: isLoggedIn ?? this.isLoggedIn,
       selectedIndex: selectedIndex ?? this.selectedIndex,
     );
+  }
+
+
+}
+
+class MainModel {
+  final DatabaseHelper dbHelper = DatabaseHelper();
+
+  // Fetch user data
+  Future<User?> getUser(String email) async {
+    return await dbHelper.getUserByEmail(email);
+  }
+
+  // Fetch events for the current user
+  Future<List<Event>> getEvents(int userId) async {
+    return await dbHelper.getEventsForUser();
+  }
+
+  // Fetch gifts for a specific event
+  Future<List<Gift>> getGifts(int eventId) async {
+    return await dbHelper.getGiftsForEvent(eventId);
   }
 }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'GiftListPage .dart';
-import 'package:mbileprogrammingproject/controlles/giftlistcontroller.dart';// Import GiftListPage
+import 'GiftListPage .dart'; // Corrected import for GiftListPage
+import 'package:mbileprogrammingproject/controlles/giftlistcontroller.dart'; // Import GiftListPage
 import 'controlles/eventlistcontroller.dart'; // Import your controller
 import 'models/eventlistmodel.dart'; // Import your model
 
-class EventListPage extends StatefulWidget {
+class EventListPage extends StatefulWidget
+{
   @override
   _EventListPageState createState() => _EventListPageState();
 }
@@ -18,25 +19,30 @@ class _EventListPageState extends State<EventListPage> with AutomaticKeepAliveCl
   Widget build(BuildContext context) {
     super.build(context); // Call this to integrate with AutomaticKeepAliveClientMixin
 
-    return ChangeNotifierProvider(
+    return ChangeNotifierProvider
+      (
       create: (context) => EventController(),
       child: Scaffold(
         appBar: AppBar(
           title: Text('Event List'),
           actions: [
             Consumer<EventController>(
-              builder: (context, controller, _) {
+              builder: (context, controller, _)
+              {
                 return DropdownButton(
                   value: controller.dropdownValue,
                   icon: const Icon(Icons.keyboard_arrow_down),
-                  items: ['Category', 'Status', 'Name'].map((String item) {
+                  items: ['Category', 'Status', 'Name'].map((String item)
+                  {
                     return DropdownMenuItem(
                       value: item,
                       child: Text(item),
                     );
                   }).toList(),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
+                  onChanged: (String? newValue)
+                  {
+                    if (newValue != null)
+                    {
                       controller.sortEvents(newValue);
                     }
                   },
@@ -46,27 +52,42 @@ class _EventListPageState extends State<EventListPage> with AutomaticKeepAliveCl
           ],
         ),
         body: Consumer<EventController>(
-          builder: (context, controller, _) {
+          builder: (context, controller, _)
+          {
             return ListView.builder(
               itemCount: controller.events.length,
-              itemBuilder: (context, index) {
+              itemBuilder: (context, index)
+              {
                 final event = controller.events[index];
-                return ListTile(
-                  title: GestureDetector(
-                    child: Text(
+                return ListTile
+                  (
+                  title: GestureDetector
+                    (
+                    child: Text
+                      (
                       event.name,
                       style: TextStyle(
                         color: Colors.blue,
                         decoration: TextDecoration.underline,
                       ),
                     ),
-                    onTap: () {
-                      Navigator.push(
+                    onTap: () async
+                    {
+                      debugPrint("Navigating to GiftListPage for Event: ${event.name}, eventId: ${event.id}");
+                      await Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => GiftListPage(event: event), // Pass the event here
-                        ),
+                          MaterialPageRoute
+                            (
+                            builder: (context) => GiftListPage
+                              (
+                              event: event,
+                              eventId: event.id ?? 0,
+                              eventName: event.name,// Provide a fallback value if event.id is null
+                            ),
+                          )
+
                       );
+                      debugPrint("Returned from GiftListPage");
                     },
                   ),
                   subtitle: Text('${event.category} - ${event.status}'),
@@ -101,7 +122,8 @@ class _EventListPageState extends State<EventListPage> with AutomaticKeepAliveCl
     );
   }
 
-  void _showEditDialog(BuildContext context, EventController controller, int index) {
+  void _showEditDialog(BuildContext context, EventController controller, int index)
+  {
     final event = controller.events[index];
     final nameController = TextEditingController(text: event.name);
     final categoryController = TextEditingController(text: event.category);
@@ -109,8 +131,10 @@ class _EventListPageState extends State<EventListPage> with AutomaticKeepAliveCl
 
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
+      builder: (context)
+      {
+        return AlertDialog
+          (
           title: Text('Edit Event'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -129,14 +153,17 @@ class _EventListPageState extends State<EventListPage> with AutomaticKeepAliveCl
               ),
             ],
           ),
-          actions: [
+          actions:
+          [
             TextButton(
-              onPressed: () {
+              onPressed: ()
+              {
                 final name = nameController.text;
                 final category = categoryController.text;
                 final status = statusController.text;
 
-                if (name.isEmpty) {
+                if (name.isEmpty)
+                {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Name field should not be empty')),
                   );
@@ -144,11 +171,13 @@ class _EventListPageState extends State<EventListPage> with AutomaticKeepAliveCl
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Category must be "Work" or "Personal".')),
                   );
-                } else if (status != 'Past' && status != 'Upcoming' && status != 'Current') {
+                } else if (status != 'Past' && status != 'Upcoming' && status != 'Current')
+                {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Status must be "Past", "Upcoming", or "Current".')),
                   );
-                } else {
+                } else
+                {
                   controller.editEvent(index, name, category, status);
                   Navigator.of(context).pop();
                 }

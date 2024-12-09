@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'Gift details page.dart';
 import 'controlles/giftdetailscontroller.dart';
+import 'darkcontroller.dart';
 import 'eventlistpage.dart';
 import 'GiftListPage .dart';
 import 'My Pledged Gifts Page.dart';
@@ -17,17 +18,28 @@ import 'package:flutter/services.dart';
 import 'package:mbileprogrammingproject/database/databasehelp.dart';
 import 'package:mbileprogrammingproject/controlles/maincontroller.dart';
 import 'package:mbileprogrammingproject/models/profilemodel.dart';
+import 'package:mbileprogrammingproject/controlles/giftdetailscontroller.dart';
 import 'package:mbileprogrammingproject/controlles/pledgedcontroller.dart';
+import 'package:mbileprogrammingproject/signup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async
 {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);// Ensure bindings are initialized before running the app
+  await SystemChrome.setPreferredOrientations
+    (
+    [
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ],
+  ); // Ensure
+  // bindings are initialized before running the app
+  final mainController = MainViewController();
+  await mainController.initializeApp();
+
   runApp(
-    MultiProvider(
+    MultiProvider
+      (
       providers: [
         ChangeNotifierProvider(
           create: (context) => MainViewController(),
@@ -36,11 +48,19 @@ void main() async
           create: (context) => UserProfileController(
             userProfile: UserProfile(), // Pass an initial UserProfile instance here
           ),
-        ), ChangeNotifierProvider
-          (create: (context) => GiftpledgedController(),) , ChangeNotifierProvider
-(create: (context) => GiftlistController(),
-
-        )],
+        ),
+        ChangeNotifierProvider
+          (
+          create: (context) => GiftController(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => GiftpledgedController(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => GiftlistController(),
+        ),
+        ChangeNotifierProvider(create: (context) => ThemeController()..loadThemePreference()),
+      ],
       child: MyApp(),
     ),
   );
@@ -51,25 +71,51 @@ class MyApp extends StatelessWidget
   @override
   Widget build(BuildContext context)
   {
+    final themeController = Provider.of<ThemeController>(context);
+
     return MaterialApp(
 
       debugShowCheckedModeBanner: false,
       title: 'Hediaty App',
-      theme: ThemeData
-        (
+      theme: themeController.isDarkMode
+          ? ThemeData(
+        brightness: Brightness.dark,
+        primarySwatch: Colors.grey, // Neutral primary colors
+        scaffoldBackgroundColor: Colors.black, // True black background
+        appBarTheme: AppBarTheme(
+          color: Colors.black, // True black AppBar
+          iconTheme: IconThemeData(color: Colors.white),
+        ),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Colors.black,
+          selectedItemColor: Colors.green,
+          unselectedItemColor: Colors.grey,
+        ),
+        cardColor: Colors.black, // Cards with true black background
+        textTheme: TextTheme(
+
+        ),
+      )
+          : ThemeData(
+        brightness: Brightness.light,
         primarySwatch: Colors.green,
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: AppBarTheme(color: Colors.lightBlue),
+        bottomNavigationBarTheme: BottomNavigationBarThemeData(
+          backgroundColor: Colors.white,
+          selectedItemColor: Colors.green,
+          unselectedItemColor: Colors.blue,
+        ),
+        textTheme: TextTheme(
+
+        ),
       ),
+
       home: Consumer<MainViewController>(
         builder: (context, controller, child) {
-          // Show loading spinner during initialization
           if (!controller.isInitialized) {
-            return Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
+            return Scaffold(body: Center(child: CircularProgressIndicator()));
           }
-
-          debugPrint("Logged in status: ${controller.isLoggedIn}");
-          // Navigate to MainView if logged in
           return controller.isLoggedIn ? MainView() : LoginPage();
         },
       ),
@@ -78,24 +124,52 @@ class MyApp extends StatelessWidget
 }
 
 
-
-class MainView extends StatelessWidget
-{
+class MainView extends StatelessWidget {
   final PageStorageBucket _bucket = PageStorageBucket();
 
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<MainViewController>(context);
+    final themeController = Provider.of<ThemeController>(context, listen: false);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Text('Home'),
+        backgroundColor: Colors.lightBlue,
+        elevation: 0,
         actions: [
           IconButton(
+            icon: Icon(themeController.isDarkMode ? Icons.dark_mode : Icons.light_mode),
             onPressed: () {
-              debugPrint("Search button pressed.");
+              themeController.toggleTheme();
             },
-            icon: const Icon(Icons.search),
+          ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text("Logout"),
+                  content: Text("Are you sure you want to log out?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text("Cancel"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text("Logout"),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await controller.logout(context);
+              }
+            },
           ),
         ],
       ),
@@ -115,31 +189,40 @@ class MainView extends StatelessWidget
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: controller.selectedIndex,
         onTap: (index) {
-          debugPrint("Navigating to index: $index");
           controller.updateSelectedIndex(index);
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.group, color: Colors.blue,),  label:  'Friends'),
-          BottomNavigationBarItem(icon: Icon(Icons.event,color: Colors.blue,), label: 'Events'),
-          BottomNavigationBarItem(icon: Icon(Icons.list,color: Colors.blue,), label: 'Gifts'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite,color: Colors.blue,), label: 'Pledged'),
-          BottomNavigationBarItem(icon: Icon(Icons.person,color: Colors.blue,), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.group, color: Colors.blue),
+            label: 'Friends',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event, color: Colors.blue),
+            label: 'Events',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list, color: Colors.blue),
+            label: 'Gifts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite, color: Colors.blue),
+            label: 'Pledged',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, color: Colors.blue),
+            label: 'Profile',
+          ),
         ],
-
-        selectedItemColor: Colors.green, // Color for the selected label and icon
+        selectedItemColor: Colors.green,
         unselectedItemColor: Colors.blue,
       ),
     );
   }
 }
-
-
-
 class FriendListPage extends StatelessWidget
 {
   @override
-  Widget build(BuildContext context)
-  {
+  Widget build(BuildContext context) {
     final controller = Provider.of<MainViewController>(context);
 
     return FutureBuilder(
@@ -170,3 +253,5 @@ class FriendListPage extends StatelessWidget
     );
   }
 }
+
+

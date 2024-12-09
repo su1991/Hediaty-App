@@ -3,7 +3,8 @@ import 'package:mbileprogrammingproject/models/eventlistmodel.dart';
 
 class EventController extends ChangeNotifier
 {
-  List<Event> _events = [
+  List<Event> _events =
+  [
     Event(name: 'Birthday Party', category: 'Personal', status: 'Upcoming'),
     Event(name: 'Conference', category: 'Work', status: 'Current'),
     Event(name: 'Wedding', category: 'Personal', status: 'Past'),
@@ -21,24 +22,28 @@ class EventController extends ChangeNotifier
   }
 
 
-  void addEvent() {
+  void addEvent()
+  {
     _events.add(Event(name: 'New Event', category: 'General', status: 'Upcoming'));
     notifyListeners();
   }
 
-  void deleteEvent(int index) {
+  void deleteEvent(int index)
+  {
     _events.removeAt(index);
     notifyListeners();
   }
 
-  void editEvent(int index, String name, String category, String status) {
+  void editEvent(int index, String name, String category, String status)
+  {
     _events[index] = Event(name: name, category: category, status: status);
     notifyListeners();
   }
 
   void sortEvents(String criterion)
   {
-    switch (criterion) {
+    switch (criterion)
+    {
       case 'Category':
         _events.sort((a, b) => a.category.compareTo(b.category));
         break;

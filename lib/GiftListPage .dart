@@ -1,227 +1,154 @@
 import 'package:flutter/material.dart';
+import 'package:mbileprogrammingproject/models/eventlistmodel.dart';
 import 'package:provider/provider.dart';
-import 'package:mbileprogrammingproject/controlles/giftlistcontroller.dart';  // Import the GiftController
-import 'package:mbileprogrammingproject/models/giftlistmodel.dart';
+import 'package:mbileprogrammingproject/controlles/giftlistcontroller.dart';
+import 'package:mbileprogrammingproject/controlles/giftdetailscontroller.dart';
+import 'package:mbileprogrammingproject/models/giftdetailsmodel.dart';
 
-import 'models/eventlistmodel.dart';
+class GiftListPage extends StatefulWidget {
+  final int eventId;
+  final String eventName;
 
-// Import the Gift model
-
-class GiftListPage extends StatefulWidget
-{
-  final Event event; // Define the event parameter here
-
-  // Constructor with named parameter
-  GiftListPage({required this.event});
+  GiftListPage({required this.eventId, required Event event, required this.eventName});
 
   @override
   _GiftListPageState createState() => _GiftListPageState();
 }
+
 class _GiftListPageState extends State<GiftListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Gift List'),
-        actions: [
-          // Sorting Dropdown
-          Consumer<GiftlistController>(
-            builder: (context, controller, _) {
-              return DropdownButton<String>(
-                value: controller.sortCriteria,
-                icon: const Icon(Icons.sort),
-                items: <String>['name', 'category', 'status']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value.capitalize()),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    controller.sortGifts(newValue);
-                  }
-                },
-              );
-            },
-          ),
-        ],
+        title: Text('Gift List for ${widget.eventName}'),
       ),
       body: Consumer<GiftlistController>(
-        builder: (context, controller, _) {
-          return controller.gifts.isEmpty
-              ? Center(child: Text('No gifts added!'))
+        builder: (context, giftlistController, child) {
+          if (giftlistController.isLoading) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          return giftlistController.eventGifts.isEmpty
+              ? Center(
+            child: Text(
+              'Empty.',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          )
               : ListView.builder(
-            itemCount: controller.gifts.length,
+            itemCount: giftlistController.eventGifts.length,
             itemBuilder: (context, index) {
-              final gift = controller.gifts[index];
-              return ListTile(
-                title: Text(gift.name),
-                subtitle: Text('${gift.category} - ${gift.status}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        _showEditDialog(context, controller, index);
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () {
-                        controller.deleteGift(index);
-                      },
-                    ),
-                  ],
+              final gift = giftlistController.eventGifts[index];
+              bool isSelected = giftlistController.getSelectedGiftsForEvent(widget.eventId).contains(gift);
+              return Card(
+                clipBehavior: Clip.hardEdge,
+                child: ListTile(
+                  title: Text(gift.name),
+                  subtitle: Text(gift.category),
+                  trailing: Icon(
+                    Icons.check_circle,
+                    color: isSelected ? Colors.green : Colors.grey,
+                  ),
                 ),
               );
             },
           );
         },
       ),
-      floatingActionButton: Consumer<GiftlistController>(
-        builder: (context, controller, _) {
-          return FloatingActionButton(
-            onPressed: () {
-              _showAddDialog(context, controller);
-            },
-            tooltip: 'Add Gift',
-            child: Icon(Icons.add),
-          );
-        },
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddGiftDialog(context),
+        child: Icon(Icons.add),
+        tooltip: 'Add Gift',
       ),
     );
   }
 
-  // Add Gift Dialog
-  void _showAddDialog(BuildContext context, GiftlistController controller) {
-    final nameController = TextEditingController();
-    final categoryController = TextEditingController();
-    String status = 'Available';
+  // Show dialog to add a gift
+  void _showAddGiftDialog(BuildContext context) async {
+    final giftController = Provider.of<GiftController>(context, listen: false);
+    final giftlistController = Provider.of<GiftlistController>(context, listen: false);
 
+    // Fetch available gifts for the event
+    final availableGifts = await giftController.getAvailableGiftsForEvent(widget.eventId);
+
+    print('Available gifts fetched: ${availableGifts.length}'); // Debugging output
+
+    if (availableGifts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No available gifts to add.')));
+      return;
+    }
+
+    // Show the dialog with available gifts to choose from
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text('Add Gift'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Gift Name'),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Select Gifts to Add'),
+              content: SizedBox(
+                height: 250,
+                width: 300,
+                child: ListView.builder(
+                  itemCount: availableGifts.length,
+                  itemBuilder: (context, index) {
+                    final gift = availableGifts[index];
+                    bool isSelected = giftlistController.getSelectedGiftsForEvent(widget.eventId).contains(gift);
+                    return ListTile(
+                      title: Text(gift.name),
+                      subtitle: Text(gift.category),
+                      leading: Checkbox(
+                        value: isSelected,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            if (value == true) {
+                              giftlistController.addGiftToSelectedList(widget.eventId, gift); // Add gift to selected list
+                            } else {
+                              giftlistController.removeGiftFromSelectedList(widget.eventId, gift); // Remove gift from selected list
+                            }
+                          });
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
-              TextField(
-                controller: categoryController,
-                decoration: InputDecoration(labelText: 'Category'),
-              ),
-              DropdownButton<String>(
-                value: status,
-                items: <String>['Available', 'Pledged']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  status = newValue!;
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty && categoryController.text.isNotEmpty) {
-                  controller.addGift(nameController.text, categoryController.text, status);
-                  Navigator.of(context).pop();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Name and category are required'),
-                  ));
-                }
-              },
-              child: Text('Add'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    final selectedGifts = giftlistController.getSelectedGiftsForEvent(widget.eventId);
+
+                    if (selectedGifts.isNotEmpty) {
+                      for (var gift in selectedGifts) {
+                        giftController.addGiftToEvent(
+                          name: gift.name,
+                          category: gift.category,
+                          status: gift.status,
+                          eventId: widget.eventId,
+                          description: gift.description,
+                          price: gift.price,
+                        );
+                      }
+
+                      // Refresh the list of gifts for the event
+                      giftlistController.loadEventGifts(widget.eventId);
+
+                      Navigator.of(context).pop(); // Close dialog
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No gifts selected')));
+                    }
+                  },
+                  child: Text('Add Selected Gifts'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Cancel'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
-  }
-
-  // Edit Gift Dialog
-  void _showEditDialog(BuildContext context, GiftlistController controller, int index)
-  {
-    final gift = controller.gifts[index];
-    final nameController = TextEditingController(text: gift.name);
-    final categoryController = TextEditingController(text: gift.category);
-    String status = gift.status;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Edit Gift'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Gift Name'),
-              ),
-              TextField(
-                controller: categoryController,
-                decoration: InputDecoration(labelText: 'Category'),
-              ),
-              DropdownButton<String>(
-                value: status,
-                items: <String>['Available', 'Pledged']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  status = newValue!;
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty && categoryController.text.isNotEmpty) {
-                  controller.editGift(index, nameController.text, categoryController.text, status);
-                  Navigator.of(context).pop();
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Name and category are required'),
-                  ));
-                }
-              },
-              child: Text('Save'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-// Extension for capitalizing first letter
-extension StringCapitalization on String {
-  String capitalize() {
-    return this[0].toUpperCase() + this.substring(1).toLowerCase();
   }
 }

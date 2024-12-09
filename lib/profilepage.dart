@@ -13,7 +13,8 @@ class UserProfilePage extends StatefulWidget
   _UserProfilePageState createState() => _UserProfilePageState();
 }
 
-class _UserProfilePageState extends State<UserProfilePage> {
+class _UserProfilePageState extends State<UserProfilePage>
+{
   late TextEditingController _nameController;
   late TextEditingController _emailController;
 
@@ -61,11 +62,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
             children: [
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(labelText: 'Name',border: OutlineInputBorder()),
               ),
+              SizedBox(height: 16,),
               TextField(
                 controller: _emailController,
-                decoration: InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: 'Email',border: OutlineInputBorder()),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
