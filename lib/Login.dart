@@ -21,7 +21,7 @@ class _LoginPageState extends State<LoginPage> {
   {
     final controller = Provider.of<MainViewController>(context, listen: false);
     return Scaffold(
-      appBar: AppBar(title: Text("Login"), backgroundColor: Colors.yellow),
+      appBar: AppBar(title: Text("Login"), backgroundColor: Colors.red),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
