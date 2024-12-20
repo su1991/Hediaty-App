@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:mbileprogrammingproject/models/eventlistmodel.dart';
 import 'package:provider/provider.dart';
-import 'package:mbileprogrammingproject/controlles/giftlistcontroller.dart';
-import 'package:mbileprogrammingproject/controlles/giftdetailscontroller.dart';
+import 'package:mbileprogrammingproject/controlles/giftdetailscontroller.dart'; // Import GiftController
 import 'package:mbileprogrammingproject/models/giftdetailsmodel.dart';
 
 class GiftListPage extends StatefulWidget {
-  final int eventId;
+  final String eventId;
   final String eventName;
+  final String userId;
 
-  GiftListPage({required this.eventId, required Event event, required this.eventName});
+  const GiftListPage({
+    required this.eventId,
+    required this.eventName,
+    required Event event,
+    required this.userId, // You can remove this if not used
+  });
 
   @override
   _GiftListPageState createState() => _GiftListPageState();
@@ -18,37 +23,40 @@ class GiftListPage extends StatefulWidget {
 class _GiftListPageState extends State<GiftListPage> {
   @override
   Widget build(BuildContext context) {
+    // Access GiftController via Provider
+    final giftlistController = Provider.of<GiftController>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Gift List for ${widget.eventName}'),
       ),
-      body: Consumer<GiftlistController>(
+      body: Consumer<GiftController>( // Consumer will rebuild the UI when the state changes
         builder: (context, giftlistController, child) {
           if (giftlistController.isLoading) {
             return Center(child: CircularProgressIndicator());
           }
 
-          return giftlistController.eventGifts.isEmpty
-              ? Center(
-            child: Text(
-              'Empty.',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          )
-              : ListView.builder(
-            itemCount: giftlistController.eventGifts.length,
+          // Fetch selected gifts for this specific event
+          final eventGifts = giftlistController.getSelectedGiftsForEvent(widget.eventId);
+
+          if (eventGifts.isEmpty) {
+            return Center(
+              child: Text(
+                'No gifts selected.',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: eventGifts.length,
             itemBuilder: (context, index) {
-              final gift = giftlistController.eventGifts[index];
-              bool isSelected = giftlistController.getSelectedGiftsForEvent(widget.eventId).contains(gift);
+              final gift = eventGifts[index];
               return Card(
-                clipBehavior: Clip.hardEdge,
                 child: ListTile(
                   title: Text(gift.name),
                   subtitle: Text(gift.category),
-                  trailing: Icon(
-                    Icons.check_circle,
-                    color: isSelected ? Colors.green : Colors.grey,
-                  ),
+                  trailing: Text('\$${gift.price.toStringAsFixed(2)}'),
                 ),
               );
             },
@@ -63,92 +71,62 @@ class _GiftListPageState extends State<GiftListPage> {
     );
   }
 
-  // Show dialog to add a gift
   void _showAddGiftDialog(BuildContext context) async {
     final giftController = Provider.of<GiftController>(context, listen: false);
-    final giftlistController = Provider.of<GiftlistController>(context, listen: false);
 
-    // Fetch available gifts for the event
-    final availableGifts = await giftController.getAvailableGiftsForEvent(widget.eventId);
-
-    print('Available gifts fetched: ${availableGifts.length}'); // Debugging output
+    // Fetch available gifts for the specific event
+    final availableGifts = await giftController.getAllGifts();
 
     if (availableGifts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No available gifts to add.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No available gifts to add.')),
+      );
       return;
     }
 
-    // Show the dialog with available gifts to choose from
     showDialog(
       context: context,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text('Select Gifts to Add'),
-              content: SizedBox(
-                height: 250,
-                width: 300,
-                child: ListView.builder(
+        return AlertDialog(
+          title: Text('Select Gifts to Add'),
+          content: SizedBox(
+            height: 250,
+            width: 300,
+            child: Consumer<GiftController>(
+              builder: (context, giftlistController, child) {
+                // Get the selected gifts for the event
+                final selectedGifts = giftlistController.getSelectedGiftsForEvent(widget.eventId);
+
+                return ListView.builder(
                   itemCount: availableGifts.length,
                   itemBuilder: (context, index) {
                     final gift = availableGifts[index];
-                    bool isSelected = giftlistController.getSelectedGiftsForEvent(widget.eventId).contains(gift);
-                    return ListTile(
+                    return CheckboxListTile(
                       title: Text(gift.name),
                       subtitle: Text(gift.category),
-                      leading: Checkbox(
-                        value: isSelected,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            if (value == true) {
-                              giftlistController.addGiftToSelectedList(widget.eventId, gift); // Add gift to selected list
-                            } else {
-                              giftlistController.removeGiftFromSelectedList(widget.eventId, gift); // Remove gift from selected list
-                            }
-                          });
-                        },
-                      ),
+                      value: selectedGifts.contains(gift),
+                      onChanged: (bool? value) {
+                        if (value == true) {
+                          giftlistController.addGiftToSelectedList(widget.userId, widget.eventId, gift);
+                        } else {
+                          giftlistController.removeGiftFromSelectedList(widget.eventId, gift);
+                        }
+                      },
                     );
                   },
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    final selectedGifts = giftlistController.getSelectedGiftsForEvent(widget.eventId);
-
-                    if (selectedGifts.isNotEmpty) {
-                      for (var gift in selectedGifts) {
-                        giftController.addGiftToEvent(
-                          name: gift.name,
-                          category: gift.category,
-                          status: gift.status,
-                          eventId: widget.eventId,
-                          description: gift.description,
-                          price: gift.price,
-                        );
-                      }
-
-                      // Refresh the list of gifts for the event
-                      giftlistController.loadEventGifts(widget.eventId);
-
-                      Navigator.of(context).pop(); // Close dialog
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No gifts selected')));
-                    }
-                  },
-                  child: Text('Add Selected Gifts'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Cancel'),
-                ),
-              ],
-            );
-          },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel'),
+            ),
+          ],
         );
       },
     );
   }
 }
+

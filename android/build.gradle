@@ -1,11 +1,20 @@
+buildscript {
+    repositories {
+        google()  // Ensure this is included
+        mavenCentral()  // Optional, but can be useful for additional dependencies
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.1'  // Use the correct Gradle plugin version
+        classpath 'com.google.gms:google-services:4.4.0'  // Firebase plugin for Google services
+    }
+}
+
 allprojects {
     repositories {
         google()
         mavenCentral()
     }
 }
-
-
 
 rootProject.buildDir = "../build"
 subprojects {

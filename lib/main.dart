@@ -1,9 +1,15 @@
 import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:mbileprogrammingproject/controlles/giftlistcontroller.dart';
+import 'package:mbileprogrammingproject/controlles/eventlistcontroller.dart';
+import 'package:mbileprogrammingproject/controlles/giftdetailscontroller.dart';
+import 'package:mbileprogrammingproject/models/mainmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:sqflite/sqflite.dart';
 import 'Gift details page.dart';
 import 'controlles/giftdetailscontroller.dart';
 import 'darkcontroller.dart';
@@ -15,85 +21,79 @@ import 'models/profilemodel.dart';
 import 'profilepage.dart';
 import 'Login.dart';
 import 'package:flutter/services.dart';
-import 'package:mbileprogrammingproject/database/databasehelp.dart';
+import 'package:mbileprogrammingproject/database/dataV2.dart';
 import 'package:mbileprogrammingproject/controlles/maincontroller.dart';
 import 'package:mbileprogrammingproject/models/profilemodel.dart';
 import 'package:mbileprogrammingproject/controlles/giftdetailscontroller.dart';
 import 'package:mbileprogrammingproject/controlles/pledgedcontroller.dart';
 import 'package:mbileprogrammingproject/signup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mbileprogrammingproject/friend_details_page.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-void main() async
-{
+
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations
-    (
-    [
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ],
-  ); // Ensure
-  // bindings are initialized before running the app
+  await Firebase.initializeApp();
+
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.clear(); // Clear all cached data on app initialization
   final mainController = MainViewController();
   await mainController.initializeApp();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+  const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher'); // Default icon
+  final InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
   runApp(
-    MultiProvider
-      (
+    MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (context) => MainViewController(),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => UserProfileController(
-            userProfile: UserProfile(), // Pass an initial UserProfile instance here
-          ),
-        ),
-        ChangeNotifierProvider
-          (
-          create: (context) => GiftController(),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => GiftpledgedController(),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => GiftlistController(),
-        ),
+        ChangeNotifierProvider(create: (context) => mainController),
+        ChangeNotifierProvider(create: (context) => UserProfileController(userProfile: UserProfile())),
+        ChangeNotifierProvider(create: (context) => GiftpledgedController()),
+        ChangeNotifierProvider(create: (context) => EventController()),
+        ChangeNotifierProvider(create: (context) => GiftController()),
         ChangeNotifierProvider(create: (context) => ThemeController()..loadThemePreference()),
+        
       ],
       child: MyApp(),
     ),
   );
 }
 
+
 class MyApp extends StatelessWidget
 {
   @override
-  Widget build(BuildContext context)
-  {
+  Widget build(BuildContext context) {
     final themeController = Provider.of<ThemeController>(context);
 
     return MaterialApp(
-
       debugShowCheckedModeBanner: false,
       title: 'Hediaty App',
       theme: themeController.isDarkMode
           ? ThemeData(
         brightness: Brightness.dark,
-        primarySwatch: Colors.grey, // Neutral primary colors
-        scaffoldBackgroundColor: Colors.black, // True black background
+        primarySwatch: Colors.grey,
+        scaffoldBackgroundColor: Colors.black,
         appBarTheme: AppBarTheme(
-          color: Colors.black, // True black AppBar
+          color: Colors.black,
           iconTheme: IconThemeData(color: Colors.white),
         ),
         bottomNavigationBarTheme: BottomNavigationBarThemeData(
           backgroundColor: Colors.black,
           selectedItemColor: Colors.green,
           unselectedItemColor: Colors.grey,
-        ),
-        cardColor: Colors.black, // Cards with true black background
-        textTheme: TextTheme(
-
         ),
       )
           : ThemeData(
@@ -106,36 +106,108 @@ class MyApp extends StatelessWidget
           selectedItemColor: Colors.green,
           unselectedItemColor: Colors.blue,
         ),
-        textTheme: TextTheme(
-
-        ),
       ),
-
-      home: Consumer<MainViewController>(
-        builder: (context, controller, child) {
-          if (!controller.isInitialized) {
+      home: FutureBuilder<firebase.User?>(
+        future: _getCurrentUser(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            // Show a loading screen while the Firebase auth state is being checked
             return Scaffold(body: Center(child: CircularProgressIndicator()));
+          } else if (snapshot.hasError) {
+            // Handle errors
+            return Scaffold(body: Center(child: Text('Error: ${snapshot.error}')));
+          } else if (snapshot.data == null) {
+            // If the user is not logged in, show the LoginPage
+            return LoginPage();
+          } else {
+            // If the user is logged in, show the MainView
+            return MainView();
           }
-          return controller.isLoggedIn ? MainView() : LoginPage();
         },
       ),
     );
   }
+
+  Future<firebase.User?> _getCurrentUser() async {
+    // Check if the current user is logged in using Firebase Auth
+    return firebase.FirebaseAuth.instance.currentUser;
+  }
 }
 
 
-class MainView extends StatelessWidget {
+
+
+
+
+class MainView extends StatefulWidget
+{
+  @override
+  _MainViewState createState() => _MainViewState();
+}
+
+class _MainViewState extends State<MainView>
+{
   final PageStorageBucket _bucket = PageStorageBucket();
+  String userName = "User";
+  String email = "email";
+  // Make sure this is populated dynamically from Firebase or elsewhere
+  String friendId = ''; // Likewise, this should be dynamically populated
+  // Initialize email as an empty string
 
   @override
-  Widget build(BuildContext context) {
+  void initState()
+  {
+    super.initState();
+    _loadCachedUserData();
+    Provider.of<MainViewController>(context, listen: false).fetchUserName(firebase.FirebaseAuth.instance.currentUser!.uid);
+
+  }
+
+  Future<void> _loadCachedUserData() async
+  {
+    try
+    {
+      final dbHelper = DatabaseHelperv2();
+
+      // Retrieve the logged-in user's email (for example, from FirebaseAuth)
+      final currentUser = firebase.FirebaseAuth.instance.currentUser;
+
+      if (currentUser != null) {
+        setState(() {
+          email = currentUser.email ?? '';
+          var userId = currentUser.uid;// Get the email from FirebaseAuth
+        });
+
+        final cachedUserData = await dbHelper.getUserData(email);  // Fetch user data based on email
+
+        if (cachedUserData != null && cachedUserData['name'] != null) {
+          setState(() {
+            userName = cachedUserData['name'];  // Set the user name from cached data
+          });
+        }
+      } else {
+        print("No user is logged in");
+      }
+    } catch (e) {
+      if (e is DatabaseException && e.isNoSuchTableError())
+      {
+        print("Users table not found. Initializing database.");
+      } else {
+        print("Error loading cached user data: $e");
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context)
+  {
     final controller = Provider.of<MainViewController>(context);
     final themeController = Provider.of<ThemeController>(context, listen: false);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('Home'),
+        title: Text('Hello, $userName'),  // Display the username in the AppBar
         backgroundColor: Colors.lightBlue,
         elevation: 0,
         actions: [
@@ -166,7 +238,8 @@ class MainView extends StatelessWidget {
                 ),
               );
 
-              if (confirm == true) {
+              if (confirm == true)
+              {
                 await controller.logout(context);
               }
             },
@@ -179,7 +252,7 @@ class MainView extends StatelessWidget {
           index: controller.selectedIndex,
           children: [
             FriendListPage(),
-            EventListPage(),
+            EventListPage(userId: ''),
             GiftDetailsPage(),
             PledgedGiftsPage(),
             UserProfilePage(),
@@ -188,11 +261,14 @@ class MainView extends StatelessWidget {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: controller.selectedIndex,
-        onTap: (index) {
+        onTap: (index)
+        {
           controller.updateSelectedIndex(index);
         },
-        items: const [
-          BottomNavigationBarItem(
+        items: const
+        [
+          BottomNavigationBarItem
+            (
             icon: Icon(Icons.group, color: Colors.blue),
             label: 'Friends',
           ),
@@ -208,10 +284,7 @@ class MainView extends StatelessWidget {
             icon: Icon(Icons.favorite, color: Colors.blue),
             label: 'Pledged',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person, color: Colors.blue),
-            label: 'Profile',
-          ),
+
         ],
         selectedItemColor: Colors.green,
         unselectedItemColor: Colors.blue,
@@ -219,33 +292,190 @@ class MainView extends StatelessWidget {
     );
   }
 }
-class FriendListPage extends StatelessWidget
+
+
+
+class FriendListPage extends StatefulWidget
 {
+  @override
+  _FriendListPageState createState() => _FriendListPageState();
+}
+
+class _FriendListPageState extends State<FriendListPage> {
+  late Future<void> _loadData;
+
+  @override
+  void initState() {
+    super.initState();
+    final controller = Provider.of<MainViewController>(context, listen: false);
+
+    final userId = firebase.FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      controller.loadFriends(userId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<MainViewController>(context);
 
-    return FutureBuilder(
-      future: controller.loadFriends(1), // Pass user ID
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
+    return Scaffold(
+      body: Consumer<MainViewController>(
+        builder: (context, controller, child) {
+          if (controller.friends.isEmpty) {
+            return Center(child: Text("No friends found"));
+          } else {
+            return ListView(
+              children: [
+                ListTile(
+                  title: Text("Your Friends", style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                // Use Card for each friend in the list
+                ...controller.friends.map((friend) {
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 4,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.all(12),
+                      leading: CircleAvatar(
+                        backgroundImage: NetworkImage(friend.profilePic),
+                        radius: 30,
+                      ),
+                      title: Text(friend.name, style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(friend.events),
+                      trailing: Icon(Icons.arrow_forward_ios, color: Colors.blue),
+                      onTap: () {
+                        if (friend.id.isNotEmpty) {
+                          // Navigate to the FriendDetailsPage
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FriendDetailsPage(
+                                friendName: friend.name,
+                                friendEvents: friend.events,
+                                friendId: friend.id,
+                              ),
+                            ),
+                          );
+                        } else {
+                          print("Error: Friend ID is empty.");
+                        }
+                      },
+                    ),
+                  );
+                }).toList(),
+              ],
+            );
+          }
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          try {
+            await controller.fetchAllUsers();
+            _showAddFriendsDialog(context, controller);
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Error fetching users: $e")),
+            );
+          }
+        },
+        child: Icon(Icons.person_add),
+      ),
+    );
+  }
 
-        if (snapshot.hasError) {
-          return Center(child: Text("Error: ${snapshot.error}"));
-        }
+  void _showAddFriendsDialog(BuildContext context, MainViewController controller) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return FutureBuilder(
+          future: controller.fetchAllUsers(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        return ListView.builder(
-          itemCount: controller.friends.length,
-          itemBuilder: (context, index) {
-            final friend = controller.friends[index];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundImage: NetworkImage(friend.profilePic),
+            if (snapshot.hasError) {
+              return AlertDialog(
+                title: Text("Error"),
+                content: Text("Failed to fetch users: ${snapshot.error}"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("Close"),
+                  ),
+                ],
+              );
+            }
+
+            // Get the current user's ID or name
+            final currentUserName = firebase.FirebaseAuth.instance.currentUser?.displayName;
+            final currentUserId = firebase.FirebaseAuth.instance.currentUser?.uid;
+
+            if (currentUserId == null) {
+              print("Error: User is not authenticated.");
+              // Handle the case where the user is not authenticated
+            }
+
+            return AlertDialog(
+              title: Text("Add Friends"),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  itemCount: controller.allUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = controller.allUsers[index];
+
+                    // Skip the current user
+                    if (user.name == currentUserName) {
+                      return Container(); // Don't display the current user
+                    }
+
+                    return Card(
+                      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: NetworkImage(user.profilePic),
+                          radius: 30,
+                        ),
+                        title: Text(user.name),
+                        trailing: IconButton(
+                          icon: Icon(Icons.add, color: Colors.blue),
+                          onPressed: () async {
+                            Map<String, dynamic> friendData = {
+                              'name': user.name,
+                              'profilePic': user.profilePic,
+                              'events': user.events,
+                            };
+
+                            // Add the friend and reload the list
+                            await controller.addFriend(currentUserId!, friendData, user as Friend, context);
+
+                            setState(() {
+                              // The friends list will now be updated in the UI
+                            });
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
-              title: Text(friend.name),
-              subtitle: Text(friend.events),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Close"),
+                ),
+              ],
             );
           },
         );
@@ -253,5 +483,10 @@ class FriendListPage extends StatelessWidget
     );
   }
 }
+
+
+
+
+
 
 

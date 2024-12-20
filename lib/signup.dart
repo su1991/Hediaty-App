@@ -1,173 +1,175 @@
 import 'package:flutter/material.dart';
-import 'package:mbileprogrammingproject/database/databasehelp.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'package:mbileprogrammingproject/database/dataV2.dart'; // Import your DatabaseHelper
 import 'package:mbileprogrammingproject/Login.dart'; // Import Login page
 
-class SignUpPage extends StatefulWidget
-{
+class SignUpPage extends StatefulWidget {
   @override
-  _SignUpPageState createState() => _SignUpPageState();
+  _SignUpScreenState createState() => _SignUpScreenState();
 }
 
-class _SignUpPageState extends State<SignUpPage>
-{
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _prefernces = TextEditingController();
+class _SignUpScreenState extends State<SignUpPage> {
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  final DatabaseHelperv2 _dbHelper = DatabaseHelperv2(); // Initialize DatabaseHelper
+
+  String? _validatename(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Enter your name';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Enter your email';
+    } else if (!RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zAZ]{2,}$").hasMatch(value)) {
+      return 'Enter a valid email address';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Enter your password';
+    } else if (value.length <= 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
+  }
+
+  Future<void> _signUp() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      try {
+        // Create a new user in Firebase Authentication
+        final firebaseUser = await firebase_auth.FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        final userCollection = FirebaseFirestore.instance.collection('users');
+
+        // Add the user to the Firestore collection
+        await userCollection.doc(firebaseUser.user?.uid).set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          // Default preferences or additional user info
+        });
+
+        // Initialize the friends subcollection (it will be empty initially)
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(firebaseUser.user?.uid)
+            .collection('friends'); // Create an empty friends subcollection
+
+        // Cache the user locally (if required)
+        final newUser = User(
+          id: 0, // SQLite auto-increment
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          preferences: '', // Default preferences
+          password: _passwordController.text.trim(), // Save the password securely
+        );
+
+        await _dbHelper.insertUser(newUser);
+
+        // Navigate to the Login page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => LoginPage()),
+        );
+      } on firebase_auth.FirebaseAuthException catch (e) {
+        // Handle Firebase errors
+        final errorMessage = e.message ?? 'An error occurred';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(errorMessage)));
+      }
+    }
+  }
 
   @override
-  Widget build(BuildContext context)
-  {
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Sign Up"), backgroundColor: Colors.red),
-      body: Padding(
+      appBar: AppBar(title: Text('Sign Up'), backgroundColor: Colors.green),
+      body: SingleChildScrollView( // Make the body scrollable
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                border: OutlineInputBorder(),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'name',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.person),
+                ),
               ),
-            ),
-            SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
+              SizedBox(height: 16),
+              // Email field
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.email),
+                ),
               ),
-            ),
-
-            SizedBox(height: 16),
-            TextField(
-              controller: _prefernces,
-              decoration: InputDecoration(
-                labelText: 'prefernces',
-                border: OutlineInputBorder(),
+              SizedBox(height: 16),
+              // Password field
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.lock),
+                ),
               ),
-            ),
-            SizedBox(height: 16,),
-            TextField(
-
-              controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                border: OutlineInputBorder(),
+              SizedBox(height: 16),
+              // Confirm password field
+              TextField(
+                controller: _confirmPasswordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.lock),
+                ),
               ),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton
-              (
-              onPressed: () async
-              {
-                String name = _nameController.text.trim();
-                String email = _emailController.text.trim();
-                String password = _passwordController.text.trim();
-                String prefernces = _prefernces.text.trim();
-
-                // Validate the input fields
-                if (_validateInputs(name, email, password,prefernces))
-                {
-                  // Call sign-up logic
-                  await _signUp(name, email, password,prefernces);
-                }
-              },
-              child: Text("SIGN UP"),
-            ),
-            SizedBox(height: 10),
-            TextButton(
-              onPressed: () {
-                // Navigate back to the Login page
-                Navigator.pop(context);
-              },
-              child: Text("Already have an account? Login"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Validation for inputs
-  bool _validateInputs(String name, String email, String password, String prefernces)
-  {
-    if (name.isEmpty || email.isEmpty || password.isEmpty || prefernces.isEmpty)
-    {
-      _showErrorDialog("Please fill in all the fields.");
-      return false;
-    }
-
-    // Validate email format using regex
-    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-    if (!emailRegex.hasMatch(email)) {
-      _showErrorDialog("Please enter a valid email address.");
-      return false;
-    }
-
-    // Validate password length
-    if (password.length < 1)
-    {
-      _showErrorDialog("Password must be at least 1 characters long.");
-      return false;
-    }
-
-    return true; // All inputs are valid
-  }
-
-  // Sign-up logic
-  Future<void> _signUp(String name, String email, String password, String preferences) async
-  {
-    final dbHelper = DatabaseHelper();
-
-    try {
-      // Check if user already exists
-      final existingUser = await dbHelper.getUserByEmail(email);
-      if (existingUser != null)
-      {
-        print('User already exists: $existingUser');
-        _showErrorDialog("User with this email already exists.");
-      } else {
-        // Insert new user into the database
-        final newUser = User(
-
-          id: 0, // Database will auto-generate the ID
-          name: name,
-          email: email,
-          password: password,
-          preferences: preferences,
-        );
-        await dbHelper.insertUser(newUser);
-        print('New user created: $newUser');
-
-        // Navigate to the login page after successful sign-up
-        Navigator.pop(context);
-      }
-    } catch (error) {
-      // Handle errors like database issues
-      print('Error during sign-up: $error');
-      _showErrorDialog("An error occurred during sign-up. Please try again.");
-    }
-  }
-
-
-  // Show error dialog
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Sign Up Failed"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text("OK"),
+              SizedBox(height: 16),
+              // Sign-Up button
+              ElevatedButton(
+                onPressed: _signUp,
+                child: Text('Sign Up'),
+              ),
+              // Navigate to login screen
+              TextButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => LoginPage()),
+                  );
+                },
+                child: Text('Already have an account? Login'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

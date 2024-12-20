@@ -38,8 +38,13 @@ class PledgedGiftsPage extends StatelessWidget {
                     return Card(
                       margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       child: ListTile(
-                        title: Text(gift.name, style: TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('For: ${gift.friendName}\nDue: ${gift.dueDate.toLocal().toString().split(' ')[0]}'),
+                        title: Text(
+                          gift.name,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'For: ${gift.friendName}\nEvent: ${gift.EventName}',
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -74,6 +79,7 @@ class PledgedGiftsPage extends StatelessWidget {
                         ),
                       ),
                     );
+                    ;
                   },
                 );
               },
@@ -81,83 +87,9 @@ class PledgedGiftsPage extends StatelessWidget {
           }
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddGiftDialog(context),
-        child: Icon(Icons.add),
-        tooltip: 'Add Gift',
-      ),
+
     );
   }
 
-  void _showAddGiftDialog(BuildContext context) {
-    final nameController = TextEditingController();
-    final friendNameController = TextEditingController();
-    final dueDateController = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Add New Gift'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(labelText: 'Gift Name'),
-                ),
-                TextField(
-                  controller: friendNameController,
-                  decoration: InputDecoration(labelText: 'Friend Name'),
-                ),
-                TextField(
-                  controller: dueDateController,
-                  decoration: InputDecoration(
-                    labelText: 'Due Date (YYYY-MM-DD)',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                final friendName = friendNameController.text.trim();
-                final dueDateText = dueDateController.text.trim();
-
-                if (name.isEmpty || friendName.isEmpty || dueDateText.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('All fields are required.')),
-                  );
-                  return;
-                }
-
-                try {
-                  final dueDate = DateTime.parse(dueDateText);
-                  final newGift = Gift(
-                    name: name,
-                    friendName: friendName,
-                    dueDate: dueDate,
-                  );
-
-                  Provider.of<GiftpledgedController>(context, listen: false).addGift(newGift);
-                  Navigator.of(context).pop();
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Invalid date format. Use YYYY-MM-DD.')),
-                  );
-                }
-              },
-              child: Text('Add'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }

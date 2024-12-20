@@ -1,35 +1,35 @@
 class Gift {
-  final int ? id;
+  String id; // Made id nullable
   final String name;
   final String description;
   final String category;
   final double price;
   final String status;
-  final int ? eventId;
-
+  final String? eventId; // eventId should be non-nullable as it’s essential
 
   Gift({
-    required this.id,
+    required this.id, // id should be nullable
     required this.name,
     required this.description,
     required this.category,
     required this.price,
     required this.status,
-    required this.eventId,
-
+    required this.eventId, // Make sure eventId is required
   });
 
   // Mapping Map<String, dynamic> to Gift
-  factory Gift.fromMap(Map<String, dynamic> map) {
-    return Gift(
+  factory Gift.fromMap(Map<String, dynamic> map)
+  {
+    return Gift
+      (
       id: map['id'],
       name: map['name'],
       description: map['description'],
       category: map['category'],
       price: map['price'],
       status: map['status'],
-      eventId: map['eventId'],
-       // Handle null if necessary
+      eventId: map['eventId'] != null ? map['eventId'].toString() : null,
+
     );
   }
 
@@ -43,24 +43,27 @@ class Gift {
       'price': price,
       'status': status,
       'eventId': eventId,
-
     };
   }
+
+  // Modify the copyWith method to make sure it works as expected
   Gift copyWith({
-    int? id,
+    String? id,
     String? name,
+    String? description,
     String? category,
     String? status,
-    int? eventId,
-
+    String? eventId,
+    double? price, // Allow for price modification as well
   }) {
-    return Gift
-      (
+    return Gift(
       id: id ?? this.id,
       name: name ?? this.name,
+      description: description ?? this.description,
       category: category ?? this.category,
+      price: price ?? this.price, // Allow price modification
       status: status ?? this.status,
-      eventId: eventId ?? this.eventId, description: '', price: 0
+      eventId: eventId ?? this.eventId, // Ensure eventId is handled correctly
     );
   }
 }

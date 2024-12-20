@@ -39,11 +39,12 @@ class _GiftDetailsPageState extends State<GiftDetailsPage>
   final _formKey = GlobalKey<FormState>();
 
   String giftName = '';
+  String giftId= '';
   String description = '';
   String category = '';
   double price = 0.0;
   bool isPledged = false;
-  int eventId = 0;
+
 
   List<Gift> _gifts = [];
   File? _image;  // Variable to store the selected image
@@ -56,19 +57,24 @@ class _GiftDetailsPageState extends State<GiftDetailsPage>
     });
   }
 
-  void _submitGift() async {
-    if (_formKey.currentState!.validate()) {
+  void _submitGift() async
+  {
+    if (_formKey.currentState!.validate())
+    {
       print('Form validated successfully. Preparing gift object.');
 
       final gift = Gift(
-        id: null,
+        id: giftId,
         name: giftName,
         description: description,
         category: category,
         price: price,
-        status: isPledged ? 'Pledged' : 'Available',
-        eventId: eventId, // Ensure eventId is set correctly
+        status: isPledged ? 'Pledged' : 'Available', eventId: '',
+          // Ensure eventId is set correctly
       );
+
+      // Print the gift object to verify it's being created correctly
+      print('Gift Object: $gift');
 
       final result = await _giftController.saveGift(gift);
       if (result != -1) {
@@ -83,6 +89,7 @@ class _GiftDetailsPageState extends State<GiftDetailsPage>
       }
     }
   }
+
 
 
 
@@ -171,7 +178,7 @@ class _GiftDetailsPageState extends State<GiftDetailsPage>
                       absorbing: isPledged,  // Disable if pledged
                       child: DropdownButtonFormField<String>(
                         decoration: InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
-                        items: ['Electronics', 'Books', 'Clothing', 'Toys', 'Accessories', 'Furniture']
+                        items: ['Electronics', 'Books', 'Clothing', 'Toys', 'Accessories', 'Furniture','Food', 'Others']
                             .map((category) => DropdownMenuItem<String>(
                           value: category,
                           child: Text(category),

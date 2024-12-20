@@ -1,33 +1,44 @@
-class Gift {
+class pGift
+{
   final String name;
   final String friendName;
-  final DateTime dueDate;
+  final String EventName;
   bool isPending;
+  final String userId;
 
-  Gift({
+  // Include userId
+
+  // Constructor with all fields
+  pGift({
     required this.name,
     required this.friendName,
-    required this.dueDate,
-    this.isPending = true,
+    required this.EventName,
+    required this.isPending,
+    required this.userId,
+    // Add userId here
   });
 
-  get category => null;
-
-  get status => null;
-
-  // Optional: Add a method to map the Gift into a database-friendly format
-  Map<String, dynamic> toMap()
-  {
+  // Convert object to a map for database storage
+  Map<String, dynamic> toMap() {
     return {
       'name': name,
       'friendName': friendName,
-      'dueDate': dueDate.toIso8601String(),
+      'EventName': EventName,
       'isPending': isPending ? 1 : 0,
+      'userId': userId,
+      // Include userId in the map
     };
   }
 
-  @override
-  String toString() {
-    return 'Gift(name: $name, friendName: $friendName, dueDate: $dueDate, isPending: $isPending)';
+  // Factory constructor to create an object from a map
+  factory pGift.fromMap(Map<String, dynamic> map) {
+    return pGift(
+      name: map['name'],
+      friendName: map['friendName'],
+      EventName: map['EventName'],
+      isPending: map['isPending'] == 1,
+      userId: map['userId'],
+      // Map the userId field
+    );
   }
 }

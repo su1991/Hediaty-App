@@ -1,1 +1,41 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ssnormandie","appId":"1:544174840258:android:62823d372e0f8b4c8e9e5b","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ssnormandie","configurations":{"android":"1:544174840258:android:62823d372e0f8b4c8e9e5b","ios":"1:544174840258:ios:fecb59503a1c3e598e9e5b","macos":"1:544174840258:ios:fecb59503a1c3e598e9e5b","web":"1:544174840258:web:02b53787a0f2c5fa8e9e5b","windows":"1:544174840258:web:6b20fa81a50b92c38e9e5b"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ssnormandie",
+          "appId": "1:544174840258:android:62823d372e0f8b4c8e9e5b",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ssnormandie",
+          "configurations": {
+            "android": "1:544174840258:android:62823d372e0f8b4c8e9e5b",
+            "ios": "1:544174840258:ios:fecb59503a1c3e598e9e5b",
+            "macos": "1:544174840258:ios:fecb59503a1c3e598e9e5b",
+            "web": "1:544174840258:web:02b53787a0f2c5fa8e9e5b",
+            "windows": "1:544174840258:web:6b20fa81a50b92c38e9e5b"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
+}

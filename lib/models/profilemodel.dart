@@ -12,7 +12,8 @@ class UserProfile
   });
 
   // Method to update the profile data
-  void updateProfile({String? newName, String? newEmail, bool? newNotifications}) {
+  void updateProfile({String? newName, String? newEmail, bool? newNotifications})
+  {
     if (newName != null) name = newName;
     if (newEmail != null) email = newEmail;
     if (newNotifications != null) notificationsEnabled = newNotifications;
