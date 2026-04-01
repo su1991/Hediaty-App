@@ -3,7 +3,8 @@ import 'package:mbileprogrammingproject/models/giftdetailsmodel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mbileprogrammingproject/database/dataV2.dart';
 
-class GiftController extends ChangeNotifier {
+class GiftController extends ChangeNotifier
+{
   final DatabaseHelperv2 _databaseHelper = DatabaseHelperv2();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -20,8 +21,10 @@ class GiftController extends ChangeNotifier {
   }
 
   // Add a gift to the selected list for a specific event
-  Future<void> addGiftToSelectedList(String userId, String eventId, Gift gift) async {
-    try {
+  Future<void> addGiftToSelectedList(String userId, String eventId, Gift gift) async
+  {
+    try
+    {
       // Reference to the Firestore collection for this specific event
       CollectionReference giftCollectionRef = _firestore
           .collection('users')

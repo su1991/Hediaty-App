@@ -18,7 +18,8 @@ class EventController extends ChangeNotifier
 
   Future<void> fetchEvents(String userId) async
   {
-    try {
+    try
+    {
 
       final snapshot = await _firestore
           .collection('users')
@@ -44,7 +45,8 @@ class EventController extends ChangeNotifier
   }
 
 
-  void sortEvents(String criterion) {
+  void sortEvents(String criterion)
+  {
     switch (criterion) {
       case 'Category':
         events.sort((a, b) => a.category.compareTo(b.category));
@@ -59,17 +61,21 @@ class EventController extends ChangeNotifier
     notifyListeners();
   }
 
-  Future<List<Event>> getAllEvents() async {
+  Future<List<Event>> getAllEvents() async
+  {
     return events;
   }
 
-  void setDropdownValue(String value) {
+  void setDropdownValue(String value)
+  {
     _dropdownValue = value;
     notifyListeners();
   }
 
-  Future<void> addEvent(String userId, Event newEvent) async {
-    try {
+  Future<void> addEvent(String userId, Event newEvent) async
+  {
+    try
+    {
       final docRef = await _firestore
           .collection('users')
           .doc(userId)
@@ -116,7 +122,8 @@ class EventController extends ChangeNotifier
 
 
 
-  Future<void> editEvent(String userId, int index, String name, String category, String status) async {
+  Future<void> editEvent(String userId, int index, String name, String category, String status) async
+  {
     final event = events[index];
     try {
       if (event.id != null && event.id!.isNotEmpty) {
@@ -148,7 +155,8 @@ class EventController extends ChangeNotifier
     }
   }
 
-  Future<void> deleteEvent(String userId, int index) async {
+  Future<void> deleteEvent(String userId, int index) async
+  {
     final event = events[index];
     try {
       if (event.id != null && event.id!.isNotEmpty) {

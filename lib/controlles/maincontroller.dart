@@ -40,9 +40,11 @@ class MainViewController extends ChangeNotifier
     SharedPreferences prefs = await SharedPreferences.getInstance();
     _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-    if (_isLoggedIn) {
+    if (_isLoggedIn)
+    {
       String? userId = prefs.getString('userId');
-      if (userId != null) {
+      if (userId != null)
+      {
         await initializeApp(); // Ensure this completes
       }
     }
@@ -50,14 +52,16 @@ class MainViewController extends ChangeNotifier
     _isInitialized = true;
     notifyListeners();
   }
-  Future<void> initializeNotifications() async {
+  Future<void> initializeNotifications() async
+  {
     const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
     final InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
 
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  Future<void> initializeApp() async {
+  Future<void> initializeApp() async
+  {
     print("Initializing app...");
     final firebaseUser = firebase_auth.FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
@@ -80,7 +84,8 @@ class MainViewController extends ChangeNotifier
   }
 
   // Modified fetchEvents to notify listeners
-  Future<void> fetchEvents(String userId) async {
+  Future<void> fetchEvents(String userId) async
+  {
     try {
       final snapshot = await _firestore
           .collection('users')
@@ -216,7 +221,8 @@ class MainViewController extends ChangeNotifier
     notifyListeners();
   }
 
-  Future<void> logout(BuildContext context) async {
+  Future<void> logout(BuildContext context) async
+  {
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     _isLoggedIn = false;
@@ -232,13 +238,16 @@ class MainViewController extends ChangeNotifier
   }
 
   bool isLoading = false;
-  void printFriendsList(String context) {
+  void printFriendsList(String context)
+  {
     print("Friends list at $context: ${_friends.map((f) => f.name).toList()}");
     printFriendsList('after loading friends');
   }
 
-  Future<void> loadFriends(String userId) async {
-    try {
+  Future<void> loadFriends(String userId) async
+  {
+    try
+    {
       // Fetch friends from Firestore where 'deleted' is false
       final snapshot = await _firestore
           .collection('users')
@@ -246,28 +255,33 @@ class MainViewController extends ChangeNotifier
           .collection('friends')
           .get();
 
-      if (snapshot.docs.isEmpty) {
+      if (snapshot.docs.isEmpty)
+      {
         print("No friends found in Firestore.");
         _friends = []; // Clear the list if no friends are found
       } else {
         // Convert Firestore documents to Friend model objects
-        _friends = snapshot.docs.map((doc) {
+        _friends = snapshot.docs.map((doc)
+        {
           return Friend.fromMap(doc.data());
         }).toList();
 
         print("Friends loaded: ${_friends.length}");
       }
-    } catch (e) {
+    } catch (e)
+    {
       // Handle errors gracefully
       print("Error loading friends: $e");
       _friends = []; // Reset the list in case of error
-    } finally {
+    } finally
+    {
       // Notify listeners after data fetching is complete
       notifyListeners();
     }
   }
 
-  Future<void> fetchAllUsers() async {
+  Future<void> fetchAllUsers() async
+  {
     print("Fetching all users...");
     try {
       final users = await FirebaseFirestore.instance.collection('users').get();
@@ -307,7 +321,8 @@ class MainViewController extends ChangeNotifier
       Map<String, dynamic> friendData,
       Friend friend,
       BuildContext context,
-      ) async {
+      ) async
+  {
     final currentUserId = firebase_auth.FirebaseAuth.instance.currentUser?.uid;
 
     if (currentUserId == null) {

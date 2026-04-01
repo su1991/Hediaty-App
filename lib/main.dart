@@ -33,11 +33,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 
 
-void main() async {
+void main() async
+{
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-
+  await firebase.FirebaseAuth.instance.signOut();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -55,9 +56,12 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
-  runApp(
-    MultiProvider(
-      providers: [
+  runApp
+    (
+    MultiProvider
+      (
+      providers:
+      [
         ChangeNotifierProvider(create: (context) => mainController),
         ChangeNotifierProvider(create: (context) => UserProfileController(userProfile: UserProfile())),
         ChangeNotifierProvider(create: (context) => GiftpledgedController()),
@@ -75,14 +79,17 @@ void main() async {
 class MyApp extends StatelessWidget
 {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context)
+  {
     final themeController = Provider.of<ThemeController>(context);
 
-    return MaterialApp(
+    return MaterialApp
+      (
       debugShowCheckedModeBanner: false,
       title: 'Hediaty App',
       theme: themeController.isDarkMode
-          ? ThemeData(
+          ? ThemeData
+        (
         brightness: Brightness.dark,
         primarySwatch: Colors.grey,
         scaffoldBackgroundColor: Colors.black,
@@ -96,7 +103,8 @@ class MyApp extends StatelessWidget
           unselectedItemColor: Colors.grey,
         ),
       )
-          : ThemeData(
+          : ThemeData
+        (
         brightness: Brightness.light,
         primarySwatch: Colors.green,
         scaffoldBackgroundColor: Colors.white,
@@ -128,7 +136,8 @@ class MyApp extends StatelessWidget
     );
   }
 
-  Future<firebase.User?> _getCurrentUser() async {
+  Future<firebase.User?> _getCurrentUser() async
+  {
     // Check if the current user is logged in using Firebase Auth
     return firebase.FirebaseAuth.instance.currentUser;
   }
@@ -250,7 +259,8 @@ class _MainViewState extends State<MainView>
         bucket: _bucket,
         child: IndexedStack(
           index: controller.selectedIndex,
-          children: [
+          children:
+          [
             FriendListPage(),
             EventListPage(userId: ''),
             GiftDetailsPage(),
@@ -301,7 +311,8 @@ class FriendListPage extends StatefulWidget
   _FriendListPageState createState() => _FriendListPageState();
 }
 
-class _FriendListPageState extends State<FriendListPage> {
+class _FriendListPageState extends State<FriendListPage>
+{
   late Future<void> _loadData;
 
   @override
@@ -389,85 +400,81 @@ class _FriendListPageState extends State<FriendListPage> {
   }
 
   void _showAddFriendsDialog(BuildContext context, MainViewController controller) {
+    TextEditingController friendname = TextEditingController();
+    List<Friend> filteredUsers = List.from(controller.allUsers); // Use List<Friend>
+
     showDialog(
       context: context,
       builder: (context) {
-        return FutureBuilder(
-          future: controller.fetchAllUsers(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.hasError) {
-              return AlertDialog(
-                title: Text("Error"),
-                content: Text("Failed to fetch users: ${snapshot.error}"),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text("Close"),
-                  ),
-                ],
-              );
-            }
-
-            // Get the current user's ID or name
-            final currentUserName = firebase.FirebaseAuth.instance.currentUser?.displayName;
-            final currentUserId = firebase.FirebaseAuth.instance.currentUser?.uid;
-
-            if (currentUserId == null) {
-              print("Error: User is not authenticated.");
-              // Handle the case where the user is not authenticated
-            }
-
+        return StatefulBuilder(
+          builder: (context, setState) {
             return AlertDialog(
               title: Text("Add Friends"),
               content: SizedBox(
                 width: double.maxFinite,
-                child: ListView.builder(
-                  itemCount: controller.allUsers.length,
-                  itemBuilder: (context, index) {
-                    final user = controller.allUsers[index];
-
-                    // Skip the current user
-                    if (user.name == currentUserName) {
-                      return Container(); // Don't display the current user
-                    }
-
-                    return Card(
-                      margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: friendname,
+                      decoration: InputDecoration(
+                        hintText: "Search friends...",
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
                       ),
-                      elevation: 4,
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: NetworkImage(user.profilePic),
-                          radius: 30,
-                        ),
-                        title: Text(user.name),
-                        trailing: IconButton(
-                          icon: Icon(Icons.add, color: Colors.blue),
-                          onPressed: () async {
-                            Map<String, dynamic> friendData = {
-                              'name': user.name,
-                              'profilePic': user.profilePic,
-                              'events': user.events,
-                            };
+                      onChanged: (value) {
+                        setState(() {
+                          filteredUsers = controller.allUsers
+                              .where((user) =>
+                              user.name.toLowerCase().contains(value.toLowerCase()))
+                              .toList();
+                        });
+                      },
+                    ),
+                    SizedBox(height: 10),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: filteredUsers.length,
+                        itemBuilder: (context, index) {
+                          final user = filteredUsers[index];
 
-                            // Add the friend and reload the list
-                            await controller.addFriend(currentUserId!, friendData, user as Friend, context);
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 4,
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: NetworkImage(user.profilePic),
+                                radius: 30,
+                              ),
+                              title: Text(user.name),
+                              trailing: IconButton(
+                                icon: Icon(Icons.add, color: Colors.blue),
+                                onPressed: () async {
+                                  Map<String, dynamic> friendData = {
+                                    'name': user.name,
+                                    'profilePic': user.profilePic,
+                                    'events': user.events,
+                                  };
 
-                            setState(() {
-                              // The friends list will now be updated in the UI
-                            });
-                            Navigator.pop(context);
-                          },
-                        ),
+                                  await controller.addFriend(
+                                      firebase.FirebaseAuth.instance.currentUser!.uid,
+                                      friendData,
+                                      user as Friend,
+                                      context);
+
+                                  setState(() {});
+                                  Navigator.pop(context);
+                                },
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
               actions: [
@@ -482,6 +489,7 @@ class _FriendListPageState extends State<FriendListPage> {
       },
     );
   }
+
 }
 
 

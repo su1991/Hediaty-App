@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-
+import 'chatpage.dart';
+import 'chatservice.dart';
 import 'controlles/pledgedcontroller.dart';
 import 'models/eventlistmodel.dart'; // Event model
 import 'models/giftdetailsmodel.dart';
 import 'models/mainmodel.dart';
 import 'models/pledgedmodel.dart'; // Import Event model
 
-class FriendDetailsPage extends StatelessWidget {
+class FriendDetailsPage extends StatelessWidget
+{
   final String friendId; // Friend's userId
   final String friendName;
 
@@ -26,6 +28,25 @@ class FriendDetailsPage extends StatelessWidget {
       appBar: AppBar(
         title: Text(friendName), // Friend's name as title
         backgroundColor: Colors.lightBlue,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.chat),
+            onPressed: ()
+            {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatPage
+                    (
+                    friendId: friendId,
+                    friendName: friendName,
+                    currentUserId: FirebaseAuth.instance.currentUser!.uid,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<List<Event>>(
         future: fetchFriendEvents(friendId), // Fetch friend's events
@@ -46,9 +67,11 @@ class FriendDetailsPage extends StatelessWidget {
 
           return ListView.builder(
             itemCount: events.length,
-            itemBuilder: (context, index) {
+            itemBuilder: (context, index)
+            {
               final event = events[index];
-              return ListTile(
+              return ListTile
+                (
                 title: Text(event.name),
                 subtitle: Text('${event.category} - ${event.status}'),
                 trailing: Icon(Icons.arrow_forward_ios),
@@ -93,7 +116,14 @@ class FriendDetailsPage extends StatelessWidget {
   }
 
 }
-class GiftsPage extends StatefulWidget {
+
+
+
+
+
+
+class GiftsPage extends StatefulWidget
+{
   final String eventId;
   final String friendId;
   final String eventName;
@@ -110,7 +140,8 @@ class GiftsPage extends StatefulWidget {
   _GiftsPageState createState() => _GiftsPageState();
 }
 
-class _GiftsPageState extends State<GiftsPage> {
+class _GiftsPageState extends State<GiftsPage>
+{
   late Future<List<Gift>> _giftsFuture;
 
   @override
